@@ -77,7 +77,6 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 		TextView mLabelEditText = (TextView) findViewById(R.id.label_edit_text_delay);
 		mLabelEditText.setText("Input Playback Delay (milliseconds): ");
 		mLabelEditText.setTextSize(17);
-		mLabelEditText.setTextColor(Color.WHITE);
 
 		mEditTextDelay = (EditText) findViewById(R.id.editTextDelay);
 
