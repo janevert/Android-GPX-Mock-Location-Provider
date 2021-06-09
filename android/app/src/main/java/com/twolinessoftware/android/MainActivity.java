@@ -15,13 +15,6 @@
  */
 package com.twolinessoftware.android;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
@@ -33,12 +26,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
-import android.provider.Settings;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -46,6 +37,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.twolinessoftware.android.framework.util.Logger;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 public class MainActivity extends Activity implements GpsPlaybackListener {
 
@@ -60,7 +58,7 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 	private EditText mEditTextDelay;
 	private ProgressDialog progressDialog;
 
-	private String filepath;
+	private Uri fileUri;
 	private String delayTimeOnReplay = "";
 	private GpsPlaybackBroadcastReceiver receiver;
 	private int state;
@@ -81,11 +79,9 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 		mLabelEditText.setTextSize(17);
 		mLabelEditText.setTextColor(Color.WHITE);
 
-
 		mEditTextDelay = (EditText) findViewById(R.id.editTextDelay);
 
 		mEditTextDelay.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-
 			public void onFocusChange(View v, boolean hasFocus) {
 				if (!hasFocus) {
 					delayTimeOnReplay = mEditTextDelay.getText().toString();
@@ -194,7 +190,7 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 	 */
 	public void startPlaybackService() {
 
-		if (filepath == null) {
+		if (fileUri == null) {
 			Toast.makeText(this, "No File Loaded", Toast.LENGTH_SHORT).show();
 			return;
 		}
@@ -207,7 +203,7 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 
 		try {
 			if (service != null) {
-				service.startService(filepath);
+				service.startService(fileUri);
 			}
 
 		} catch (RemoteException e) {
@@ -219,16 +215,10 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 	}
 
 	public void stopPlaybackService() {
-
 		try {
 			if (service != null) {
-				saveGpxFilePath(filepath);
-				mEditText.setText(filepath);
-
 				service.stopService();
 			}
-
-
 		} catch (RemoteException e) {
 		}
 	}
@@ -286,12 +276,12 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 		case REQUEST_FILE:
 			if (resultCode == RESULT_OK && data != null) {
 				// obtain the filename
-				Uri fileUri = data.getData();
+				fileUri = data.getData();
 				if (fileUri != null) {
 					String filePath = fileUri.getPath();
 					if (filePath != null) {
 						mEditText.setText(filePath);
-						this.filepath = filePath;
+						saveGpxFilePath(filePath);
 					}
 				}
 			}

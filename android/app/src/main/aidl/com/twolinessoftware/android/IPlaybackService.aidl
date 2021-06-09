@@ -17,7 +17,7 @@ package com.twolinessoftware.android;
 
 interface IPlaybackService{
 
-	void startService(String filepath);
+	void startService(in Uri uri);
 	
 	void stopService();
 	

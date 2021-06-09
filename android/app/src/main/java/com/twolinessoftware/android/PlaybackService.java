@@ -23,6 +23,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.location.Criteria;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -37,12 +38,10 @@ import com.twolinessoftware.android.framework.util.Logger;
 import com.vividsolutions.jts.geom.Coordinate;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 
 public class PlaybackService extends Service implements GpxSaxParserListener {
@@ -61,9 +60,9 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
     private final IPlaybackService.Stub mBinder = new IPlaybackService.Stub() {
 
         @Override
-        public void startService(String file) throws RemoteException {
+        public void startService(Uri uri) throws RemoteException {
             broadcastStateChange(RUNNING);
-            loadGpxFile(file);
+            loadGpx(uri);
         }
 
         @Override
@@ -149,14 +148,14 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
         }
     }
 
-    private void loadGpxFile(String file) {
-        if (file != null) {
+    private void loadGpx(Uri uri) {
+        if (uri != null) {
 
             broadcastStatus(GpsPlaybackBroadcastReceiver.Status.fileLoadStarted);
 
             cancelExistingTaskIfNecessary();
 
-            task = new ReadFileTask(file);
+            task = new ReadFileTask(uri);
             task.execute(null, null);
 
             // Display a notification about us starting.  We put an icon in the status bar.
@@ -233,17 +232,13 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
         mNM.notify(NOTIFICATION, notification);
     }
 
-    private String loadFile(String file) {
+    private String loadUri(Uri uri) {
 
         try {
-            File f = new File(file);
+            InputStream input = getContentResolver().openInputStream(uri);
+            BufferedReader buf = new BufferedReader(new InputStreamReader(input));
 
-            FileInputStream fileIS = new FileInputStream(f);
-
-            BufferedReader buf = new BufferedReader(new InputStreamReader(fileIS));
-
-            String readString = new String();
-
+            String readString;
             StringBuffer xml = new StringBuffer();
             while ((readString = buf.readLine()) != null) {
                 xml.append(readString);
@@ -366,11 +361,11 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
 
     private class ReadFileTask extends AsyncTask<Void, Integer, Void> {
 
-        private String file;
+        private Uri uri;
 
-        public ReadFileTask(String file) {
+        public ReadFileTask(Uri uri) {
             super();
-            this.file = file;
+            this.uri = uri;
         }
 
         @Override
@@ -383,13 +378,10 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
 
             // Reset the existing values
             firstGpsTime = 0;
-
             startTimeOffset = 0;
 
-            String xml = loadFile(file);
-
+            String xml = loadUri(uri);
             publishProgress(1);
-
             queueGpxPositions(xml);
 
             return null;
