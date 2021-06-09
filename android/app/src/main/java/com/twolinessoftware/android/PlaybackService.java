@@ -80,8 +80,6 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
 
         @Override
         public void stopService() throws RemoteException {
-            mLocationManager.removeTestProvider(PROVIDER_NAME);
-
             queue.reset();
 
             broadcastStateChange(STOPPED);
