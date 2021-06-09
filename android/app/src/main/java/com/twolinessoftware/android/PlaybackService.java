@@ -47,35 +47,23 @@ import java.util.Date;
 
 public class PlaybackService extends Service implements GpxSaxParserListener {
 
-    private NotificationManager mNM;
-
     private static final String NOTIFICATION_CHANNEL_ID_DEFAULT = "default";
-
     private static final String LOG = PlaybackService.class.getSimpleName();
+    private static final String PROVIDER_NAME = LocationManager.GPS_PROVIDER;
 
     private static final int NOTIFICATION = 1;
 
-    private ArrayList<GpxTrackPoint> pointList = new ArrayList<GpxTrackPoint>();
-
-    public static final boolean CONTINUOUS = true;
-
     public static final int RUNNING = 0;
     public static final int STOPPED = 1;
-
-    private static final String PROVIDER_NAME = LocationManager.GPS_PROVIDER;
 
     private GpxTrackPoint lastPoint;
 
     private final IPlaybackService.Stub mBinder = new IPlaybackService.Stub() {
 
-
         @Override
         public void startService(String file) throws RemoteException {
-
             broadcastStateChange(RUNNING);
-
             loadGpxFile(file);
-
         }
 
         @Override
@@ -98,18 +86,12 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
 
     };
 
+    private NotificationManager mNM;
     private LocationManager mLocationManager;
-
     private long startTimeOffset;
-
     private long firstGpsTime;
-
     private int state;
-
     private SendLocationWorkerQueue queue;
-
-    private boolean processing;
-
     private ReadFileTask task;
 
     @Override
@@ -119,9 +101,7 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
 
     @Override
     public void onCreate() {
-
         mNM = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-
         mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         queue = new SendLocationWorkerQueue();
@@ -129,9 +109,6 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
         broadcastStateChange(STOPPED);
 
         setupTestProvider();
-
-        processing = false;
-
     }
 
     @Override
@@ -329,7 +306,6 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
 
         lastPoint = item;
 
-        pointList.add(item);
         if (state == RUNNING) {
             if (delay > 0) {
                 Log.d(LOG, "Sending Point in:" + (delay - System.currentTimeMillis()) + "ms");
@@ -340,7 +316,6 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
                 Log.e(LOG, "Invalid Time at Point:" + gpsPointTime + " delay from current time:" + delay);
             }
         }
-
     }
 
     private double calculateHeadingFromPreviousPoint(GpxTrackPoint currentPoint, GpxTrackPoint lastPoint) {

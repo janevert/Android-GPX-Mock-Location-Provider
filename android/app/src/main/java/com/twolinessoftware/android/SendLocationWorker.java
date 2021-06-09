@@ -64,14 +64,11 @@ public class SendLocationWorker extends Worker {
 		Location loc = new Location(providerName);
 		loc.setLatitude(point.getLat());
 		loc.setLongitude(point.getLon());
-
 		loc.setTime(System.currentTimeMillis());
-
         loc.setBearing((float) point.getHeading());
         loc.setAccuracy(1.0f);
         loc.setSpeed((float) point.getSpeed());
         loc.setAltitude(100.0);
-
 
 		// bk added
 		Method method;
@@ -89,12 +86,7 @@ public class SendLocationWorker extends Worker {
 			e.printStackTrace();
 		}
 
-
 		Log.d("SendLocation", "Sending update for " + providerName);
 		mLocationManager.setTestProviderLocation(providerName, loc);
-
-
-
 	}
-
 }

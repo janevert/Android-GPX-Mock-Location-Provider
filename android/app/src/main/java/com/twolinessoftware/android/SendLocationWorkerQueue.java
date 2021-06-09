@@ -25,7 +25,7 @@ public class SendLocationWorkerQueue {
     private boolean running;
     private WorkerThread thread;
 
-    private Object lock = new Object();
+    private final Object lock = new Object();
 
     public SendLocationWorkerQueue() {
         queue = new LinkedList<SendLocationWorker>();

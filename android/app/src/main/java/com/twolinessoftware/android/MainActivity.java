@@ -55,19 +55,15 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 
 	private ServiceConnection connection;
 	private IPlaybackService service;
-	private EditText mEditText;
 
+	private EditText mEditText;
 	private EditText mEditTextDelay;
+	private ProgressDialog progressDialog;
 
 	private String filepath;
-
 	private String delayTimeOnReplay = "";
-
 	private GpsPlaybackBroadcastReceiver receiver;
-
 	private int state;
-
-	private ProgressDialog progressDialog;
 
 	private static final String APP_DATA_CACHE_FILENAME = "gpx_app_data_cache";
 	private static final String DEFAULT_PATH_TO_GPX_FILE = "/";
