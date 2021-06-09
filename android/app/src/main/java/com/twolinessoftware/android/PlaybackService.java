@@ -234,8 +234,9 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
 
     private String loadUri(Uri uri) {
 
+        InputStream input = null;
         try {
-            InputStream input = getContentResolver().openInputStream(uri);
+            input = getContentResolver().openInputStream(uri);
             BufferedReader buf = new BufferedReader(new InputStreamReader(input));
 
             String readString;
@@ -250,6 +251,14 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
 
         } catch (Exception e) {
             broadcastError("Error in the GPX file, unable to read it");
+        } finally {
+            if (input != null) {
+                try {
+                    input.close();
+                } catch (IOException e) {
+                    // not expected
+                }
+            }
         }
 
         return null;
