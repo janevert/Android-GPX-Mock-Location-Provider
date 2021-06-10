@@ -4,9 +4,14 @@ Getting Started
 ===============
 1.	Install "OI File Manager" on android device. 
 		https://market.android.com/details?id=org.openintents.filemanager
-2.	Enable "mock locations" on Android device.
+2.	Install AndroidMockGpx application.
+		adb install -g app/build/outputs/apk/debug/app-debug.apk
+3.	Enable "mock locations" on Android device.
 		Settings > Developer Options > Allow Mock Locations
-3.	Install AndroidMockGpx application.
+		or
+		Settings > System > Advanced > Developer Options > Allow Mock Locations
+	On newer Android versions this has been replaced with an application selection.
+		Settings > System > Advanced > Developer Options > Select mock location app
 4.	Play gpx/gps file.
 
 
