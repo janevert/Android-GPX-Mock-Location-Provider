@@ -51,16 +51,13 @@
 	</LinearLayout>
 
 	<Button android:id="@+id/start"
-		android:onClick="onClickStart"
 		android:text="Start Playback"
 		android:layout_width="fill_parent"
 		android:layout_height="wrap_content"
 		android:layout_marginTop="10dip"
-		android:focusableInTouchMode="true"
 		/>
 		
 	<Button android:id="@+id/stop"
-		android:onClick="onClickStop"
 		android:text="Stop Playback"
 		android:layout_width="fill_parent"
 		android:layout_height="wrap_content"

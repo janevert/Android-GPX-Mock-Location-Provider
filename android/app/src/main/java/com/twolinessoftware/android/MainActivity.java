@@ -15,13 +15,6 @@
  */
 package com.twolinessoftware.android;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
@@ -32,13 +25,11 @@ import android.content.DialogInterface.OnCancelListener;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.graphics.Color;
-import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
-import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -47,27 +38,33 @@ import android.widget.Toast;
 
 import com.twolinessoftware.android.framework.util.Logger;
 
-public class MainActivity extends Activity implements GpsPlaybackListener {
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
+public class MainActivity extends Activity implements GpsPlaybackListener {
 	private static final int REQUEST_FILE = 1;
 
 	private static final String LOGNAME = "SimulatedGPSProvider.MainActivity";
 
 	private ServiceConnection connection;
 	private IPlaybackService service;
+
 	private EditText mEditText;
-
 	private EditText mEditTextDelay;
+	private ProgressDialog progressDialog;
+	private Button mStart;
+	private Button mStop;
 
-	private String filepath;
-
-	private String delayTimeOnReplay = "";
+	private Uri fileUri;
+	private Uri nextUri = null;
+	private String delayTimeOnReplay = "1000";
 
 	private GpsPlaybackBroadcastReceiver receiver;
-
 	private int state;
-
-	private ProgressDialog progressDialog;
 
 	private static final String APP_DATA_CACHE_FILENAME = "gpx_app_data_cache";
 	private static final String DEFAULT_PATH_TO_GPX_FILE = "/";
@@ -75,6 +72,7 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
+		Logger.d(LOGNAME, "onCreate");
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
 
@@ -83,19 +81,44 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 		TextView mLabelEditText = (TextView) findViewById(R.id.label_edit_text_delay);
 		mLabelEditText.setText("Input Playback Delay (milliseconds): ");
 		mLabelEditText.setTextSize(17);
-		mLabelEditText.setTextColor(Color.WHITE);
-
 
 		mEditTextDelay = (EditText) findViewById(R.id.editTextDelay);
-
+		mEditTextDelay.setText(delayTimeOnReplay);
 		mEditTextDelay.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-
 			public void onFocusChange(View v, boolean hasFocus) {
+				Logger.i(LOGNAME, "onFocusChange(delay)");
 				if (!hasFocus) {
 					delayTimeOnReplay = mEditTextDelay.getText().toString();
+					Intent i = new Intent(getApplicationContext(), PlaybackService.class);
+					i.putExtra("delayTimeOnReplay", delayTimeOnReplay);
+					startService(i);
 				}
 			}
 		});
+
+		mStart = (Button) findViewById(R.id.start);
+		mStart.setEnabled(false);
+		mStart.setOnClickListener(v -> onClickStart(v));
+
+		mStop = (Button) findViewById(R.id.stop);
+		mStop.setEnabled(false);
+		mStop.setOnClickListener(v -> onClickStop(v));
+
+		// everything ready, now go and look at the intent, if any
+		Intent intent = getIntent();
+		if (intent != null && intent.getDataString() != null) {
+			Logger.d(LOGNAME, "intent action=" + intent.getAction() + " cat=" + intent.getCategories() + " data=" + intent.getDataString());
+			if (service != null) {
+				try {
+					service.loadGpx(intent.getData());
+				} catch (RemoteException e) {
+					Log.w(LOGNAME, "Failed to start the service", e);
+				}
+			} else {
+				Logger.i(LOGNAME, "saving uri for later");
+				nextUri = intent.getData();
+			}
+		}
 	}
 
 	@Override
@@ -110,13 +133,8 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 		if (receiver != null)
 			unregisterReceiver(receiver);
 
-		try {
-			unbindService(connection);
-		} catch (Exception ie) {
-		}
-
+		unbindService(connection);
 		super.onStop();
-
 	}
 
 	private void hideProgressDialog() {
@@ -185,7 +203,6 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 
 		try {
 			startActivityForResult(intent, REQUEST_FILE);
-
 		} catch (ActivityNotFoundException e) {
 			// No compatible file manager was found.
 			Toast.makeText(this, R.string.no_filemanager_installed,
@@ -197,43 +214,23 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 	 * "Start" button clicked
 	 */
 	public void startPlaybackService() {
-
-		if (filepath == null) {
-			Toast.makeText(this, "No File Loaded", Toast.LENGTH_SHORT).show();
-			return;
-		}
-
-		if (delayTimeOnReplay == null) {
-			Toast.makeText(this, "No delay time specified", Toast.LENGTH_SHORT).show();
-			return;
-		}
-
-
+		Logger.i(LOGNAME, "starting playback...");
 		try {
 			if (service != null) {
-				service.startService(filepath);
+				service.startService();
 			}
-
 		} catch (RemoteException e) {
+			Log.w(LOGNAME, "Exception while starting playback", e);
 		}
-
-		Intent i = new Intent(getApplicationContext(), PlaybackService.class);
-		i.putExtra("delayTimeOnReplay", delayTimeOnReplay);
-		startService(i);
 	}
 
 	public void stopPlaybackService() {
-
 		try {
 			if (service != null) {
-				saveGpxFilePath(filepath);
-				mEditText.setText(filepath);
-
 				service.stopService();
 			}
-
-
 		} catch (RemoteException e) {
+			Log.w(LOGNAME, "Exception while stopping playback", e);
 		}
 	}
 
@@ -241,29 +238,29 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 		runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
-				Button start = (Button) findViewById(R.id.start);
-				Button stop = (Button) findViewById(R.id.stop);
-
-				switch (state) {
-					case PlaybackService.RUNNING:
-						start.setEnabled(false);
-						stop.setEnabled(true);
-						break;
-					case PlaybackService.STOPPED:
-						start.setEnabled(true);
-						stop.setEnabled(false);
-						break;
+				if (service == null) {
+					mStart.setEnabled(false);
+					mStop.setEnabled(false);
+				} else {
+					switch (state) {
+						case PlaybackService.RUNNING:
+							mStart.setEnabled(false);
+							mStop.setEnabled(true);
+							break;
+						case PlaybackService.STOPPED:
+							mStart.setEnabled(true);
+							mStop.setEnabled(false);
+							break;
+					}
 				}
-
 			}
-
 		});
-
 	}
 
 	class PlaybackServiceConnection implements ServiceConnection {
 
 		public void onServiceConnected(ComponentName name, IBinder boundService) {
+			Logger.i(LOGNAME, "onServiceConnected");
 			service = IPlaybackService.Stub.asInterface(boundService);
 			try {
 				state = service.getState();
@@ -271,10 +268,22 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 				Logger.e(LOGNAME, "Unable to access state:" + e.getMessage());
 			}
 			updateUi();
+			if (nextUri != null) {
+				Logger.i(LOGNAME, "Let's load the saved uri");
+				Uri tmpUri = nextUri;
+				nextUri = null;
+				try {
+					service.loadGpx(tmpUri);
+				} catch (RemoteException e) {
+					Log.w(LOGNAME, "Failed to load the gpx", e);
+				}
+			}
 		}
 
 		public void onServiceDisconnected(ComponentName name) {
+			Logger.i(LOGNAME, "onServiceDisconnected");
 			service = null;
+			updateUi();
 		}
 
 	}
@@ -290,13 +299,23 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 		case REQUEST_FILE:
 			if (resultCode == RESULT_OK && data != null) {
 				// obtain the filename
-				Uri fileUri = data.getData();
+				fileUri = data.getData();
 				if (fileUri != null) {
 					String filePath = fileUri.getPath();
 					if (filePath != null) {
 						mEditText.setText(filePath);
-						this.filepath = filePath;
+						saveGpxFilePath(filePath);
 					}
+				}
+				try {
+					if (service != null) {
+						service.loadGpx(fileUri);
+					} else {
+						nextUri = fileUri;
+					}
+				} catch (RemoteException e) {
+					Log.w(LOGNAME, "Exception while loading gpx", e);
+					return;
 				}
 			}
 			break;
@@ -313,6 +332,9 @@ public class MainActivity extends Activity implements GpsPlaybackListener {
 	public void onFileLoadFinished() {
 		Logger.d(LOGNAME, "File loading finished");
 		hideProgressDialog();
+		Intent i = new Intent(getApplicationContext(), PlaybackService.class);
+		i.putExtra("delayTimeOnReplay", delayTimeOnReplay);
+		startService(i);
 	}
 
 	@Override

@@ -17,10 +17,9 @@ package com.twolinessoftware.android;
 
 interface IPlaybackService{
 
-	void startService(String filepath);
-	
-	void stopService();
-	
-	int getState(); 
-	
+    void loadGpx(in Uri uri);
+
+    void startService();
+    void stopService();
+    int getState();
 }
